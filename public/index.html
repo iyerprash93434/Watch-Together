@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="WatchTogether — Watch movies with your partner in real-time. Video call, screen share, and chat all in one place.">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>WatchTogether — Watch Movies Together</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TOAST NOTIFICATIONS                                 -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="toast-container"></div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- LANDING VIEW                                        -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="landing-view" class="view active">
+    <!-- Decorative background orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+    <div class="landing-container">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <rect x="4" y="8" width="40" height="28" rx="4" stroke="url(#logo-grad)" stroke-width="2.5" fill="none"/>
+            <polygon points="20,16 20,30 32,23" fill="url(#logo-grad)"/>
+            <line x1="16" y1="40" x2="32" y2="40" stroke="url(#logo-grad)" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="24" y1="36" x2="24" y2="40" stroke="url(#logo-grad)" stroke-width="2.5"/>
+            <defs>
+              <linearGradient id="logo-grad" x1="0" y1="0" x2="48" y2="48">
+                <stop offset="0%" stop-color="#a855f7"/>
+                <stop offset="100%" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 class="logo-title">WatchTogether</h1>
+        <p class="logo-subtitle">Watch movies with your loved one, no matter the distance</p>
+      </div>
+
+      <div class="glass-card landing-card">
+        <div class="card-section">
+          <h2 class="card-heading">Start a Session</h2>
+          <p class="card-description">Create a room and share the code with your partner</p>
+          <button id="btn-create-room" class="btn btn-primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Create Room
+          </button>
+        </div>
+
+        <div class="divider">
+          <span>or</span>
+        </div>
+
+        <div class="card-section">
+          <h2 class="card-heading">Join a Session</h2>
+          <p class="card-description">Enter the room code your partner shared</p>
+          <div class="input-group">
+            <input
+              type="text"
+              id="input-room-code"
+              class="input-field room-code-input"
+              placeholder="ENTER CODE"
+              maxlength="6"
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <button id="btn-join-room" class="btn btn-primary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+              </svg>
+              Join Room
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="browser-notice">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        <span>For the best experience with screen sharing audio, use <strong>Chrome</strong> or <strong>Edge</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- LOBBY VIEW                                          -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="lobby-view" class="view">
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="lobby-container">
+      <div class="glass-card lobby-card">
+        <div class="lobby-header">
+          <h2>Your Room is Ready</h2>
+          <p>Share this code with your partner to join</p>
+        </div>
+
+        <div class="room-code-display" id="lobby-room-code">
+          <span class="room-code-text" id="room-code-text">------</span>
+          <button id="btn-copy-code" class="btn-icon copy-btn" title="Copy room code">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="waiting-status" id="waiting-status">
+          <div class="waiting-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <p>Waiting for your partner to join...</p>
+        </div>
+
+        <!-- Camera preview -->
+        <div class="preview-section">
+          <div class="video-preview-wrapper">
+            <video id="preview-video" autoplay muted playsinline></video>
+            <div class="preview-overlay" id="preview-overlay">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+              </svg>
+              <span>Camera off</span>
+            </div>
+          </div>
+          <div class="preview-controls">
+            <button id="btn-toggle-mic-preview" class="btn-icon" title="Toggle microphone">
+              <svg class="icon-mic-on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+              <svg class="icon-mic-off hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="1" y1="1" x2="23" y2="23"/>
+                <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/>
+                <path d="M17 16.95A7 7 0 015 12v-2m14 0v2c0 .3-.02.6-.05.9"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <button id="btn-toggle-cam-preview" class="btn-icon" title="Toggle camera">
+              <svg class="icon-cam-on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="23 7 16 12 23 17 23 7"/>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+              </svg>
+              <svg class="icon-cam-off hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16.5 7.5L23 7v10l-3.5-2.5"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+                <path d="M7 3h8a2 2 0 012 2v4.5M3.27 5.27A2 2 0 003 5.5V17a2 2 0 002 2h10a2 2 0 001.73-1"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button id="btn-leave-lobby" class="btn btn-secondary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+          </svg>
+          Leave Room
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- CALL VIEW                                           -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="call-view" class="view">
+    <!-- Top bar -->
+    <div class="call-header">
+      <div class="call-header-left">
+        <div class="logo-mini">
+          <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
+            <rect x="4" y="8" width="40" height="28" rx="4" stroke="url(#logo-grad2)" stroke-width="2.5" fill="none"/>
+            <polygon points="20,16 20,30 32,23" fill="url(#logo-grad2)"/>
+            <defs>
+              <linearGradient id="logo-grad2" x1="0" y1="0" x2="48" y2="48">
+                <stop offset="0%" stop-color="#a855f7"/>
+                <stop offset="100%" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="call-room-code" id="call-room-code">Room: ------</span>
+        <div class="connection-status" id="connection-status">
+          <span class="status-dot connecting"></span>
+          <span class="status-text">Connecting...</span>
+        </div>
+      </div>
+      <div class="call-header-right">
+        <span class="call-timer" id="call-timer">00:00</span>
+      </div>
+    </div>
+
+    <!-- Video area -->
+    <div class="video-area" id="video-area">
+      <div class="video-grid" id="video-grid">
+        <!-- Local video -->
+        <div class="video-wrapper" id="local-video-wrapper">
+          <video id="local-video" autoplay muted playsinline></video>
+          <div class="video-label">
+            <span>You</span>
+          </div>
+          <div class="video-off-overlay hidden" id="local-cam-off">
+            <div class="avatar-circle">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Remote video -->
+        <div class="video-wrapper" id="remote-video-wrapper">
+          <video id="remote-video" autoplay playsinline></video>
+          <div class="video-label">
+            <span>Partner</span>
+          </div>
+          <div class="video-off-overlay" id="remote-cam-off">
+            <div class="avatar-circle">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screen share video (hidden by default) -->
+        <div class="video-wrapper screen-share hidden" id="screen-share-wrapper">
+          <video id="screen-share-video" autoplay playsinline></video>
+          <div class="video-label screen-share-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <span>Screen Share</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel" id="chat-panel">
+      <div class="chat-header">
+        <h3>Chat</h3>
+        <button id="btn-close-chat" class="btn-icon btn-small" title="Close chat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+          <p>No messages yet.<br>Say hi! 👋</p>
+        </div>
+      </div>
+      <div class="typing-indicator hidden" id="typing-indicator">
+        <div class="typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span>Partner is typing...</span>
+      </div>
+      <div class="chat-input-area">
+        <input
+          type="text"
+          id="chat-input"
+          class="input-field chat-input"
+          placeholder="Type a message..."
+          autocomplete="off"
+          maxlength="500"
+        >
+        <button id="btn-send-chat" class="btn-icon btn-send" title="Send message">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Controls bar -->
+    <div class="controls-bar">
+      <div class="controls-group">
+        <button id="btn-toggle-mic" class="btn-icon control-btn" title="Toggle microphone">
+          <svg class="icon-mic-on" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+            <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+          <svg class="icon-mic-off hidden" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="1" y1="1" x2="23" y2="23"/>
+            <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/>
+            <path d="M17 16.95A7 7 0 015 12v-2m14 0v2c0 .3-.02.6-.05.9"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+          <span class="control-label">Mic</span>
+        </button>
+
+        <button id="btn-toggle-cam" class="btn-icon control-btn" title="Toggle camera">
+          <svg class="icon-cam-on" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="23 7 16 12 23 17 23 7"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+          <svg class="icon-cam-off hidden" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16.5 7.5L23 7v10l-3.5-2.5"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+            <path d="M7 3h8a2 2 0 012 2v4.5M3.27 5.27A2 2 0 003 5.5V17a2 2 0 002 2h10a2 2 0 001.73-1"/>
+          </svg>
+          <span class="control-label">Camera</span>
+        </button>
+
+        <button id="btn-toggle-screen" class="btn-icon control-btn" title="Share screen">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <span class="control-label">Share</span>
+        </button>
+
+        <button id="btn-toggle-chat" class="btn-icon control-btn" title="Toggle chat">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+          <span class="control-label">Chat</span>
+          <span class="chat-badge hidden" id="chat-badge">0</span>
+        </button>
+
+        <div class="controls-divider"></div>
+
+        <button id="btn-leave-call" class="btn-icon control-btn btn-danger" title="Leave call">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7 2 2 0 011.72 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6z"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+          <span class="control-label">Leave</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/signaling.js"></script>
+  <script src="/js/webrtc.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
