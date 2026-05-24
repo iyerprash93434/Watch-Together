@@ -11,6 +11,9 @@ class WebRTCManager {
     this.screenStream = null;
     this.remoteStream = null;
     this.remoteUserId = null;
+    this.screenVideoSender = null;
+    this.screenAudioSender = null;
+    this.remoteStreamId = null;
 
     // State
     this.isMicOn = true;
@@ -105,28 +108,40 @@ class WebRTCManager {
 
     // Handle remote tracks
     this.peerConnection.ontrack = (event) => {
-      console.log('[WebRTC] Remote track received:', event.track.kind, 'stream id:', event.streams[0]?.id);
+      const stream = event.streams[0];
+      const streamId = stream?.id;
+      console.log('[WebRTC] Remote track received:', event.track.kind, 'stream id:', streamId);
 
-      if (!this.remoteStream) {
-        this.remoteStream = new MediaStream();
+      // First stream we receive is the camera/mic stream
+      if (!this.remoteStreamId) {
+        this.remoteStreamId = streamId;
       }
 
-      // Check if this is a screen share stream or camera stream
-      // We distinguish by checking if there's already a video track
-      const existingVideoTracks = this.remoteStream.getVideoTracks();
-
-      if (event.track.kind === 'video' && existingVideoTracks.length > 0) {
-        // This is a second video track — likely screen share
-        this._emit('remote-screen-track', event.track);
+      // Detect screen share: a track from a different stream than the camera stream
+      if (streamId && streamId !== this.remoteStreamId) {
+        // This is a screen share stream — emit the whole stream
+        // (contains both video and audio from screen share)
+        this._emit('remote-screen-stream', stream);
       } else {
-        this.remoteStream.addTrack(event.track);
+        // Camera/mic stream
+        if (!this.remoteStream) {
+          this.remoteStream = stream || new MediaStream();
+        } else if (stream && stream !== this.remoteStream) {
+          // Same ID but different object — add track
+          this.remoteStream.addTrack(event.track);
+        }
         this._emit('remote-stream', this.remoteStream);
       }
 
       // Handle track ending
       event.track.onended = () => {
-        console.log('[WebRTC] Remote track ended:', event.track.kind);
-        this.remoteStream?.removeTrack(event.track);
+        console.log('[WebRTC] Remote track ended:', event.track.kind, 'stream:', streamId);
+        if (streamId && streamId !== this.remoteStreamId) {
+          // Screen share track ended
+          this._emit('remote-screen-ended');
+        } else {
+          this.remoteStream?.removeTrack(event.track);
+        }
       };
 
       // Handle track mute/unmute
@@ -292,6 +307,7 @@ class WebRTCManager {
 
   /**
    * Start screen sharing with system audio
+   * Camera stays active — screen share is added as a SEPARATE stream
    */
   async startScreenShare() {
     try {
@@ -314,17 +330,12 @@ class WebRTCManager {
       const screenAudioTrack = this.screenStream.getAudioTracks()[0];
 
       if (this.peerConnection) {
-        // Replace camera video with screen video
-        const videoSender = this.peerConnection.getSenders()
-          .find(s => s.track && s.track.kind === 'video');
-
-        if (videoSender) {
-          await videoSender.replaceTrack(screenVideoTrack);
-        }
+        // ADD screen video as a NEW track (camera stays active)
+        this.screenVideoSender = this.peerConnection.addTrack(screenVideoTrack, this.screenStream);
 
         // Add screen audio as an additional track if available
         if (screenAudioTrack) {
-          this.peerConnection.addTrack(screenAudioTrack, this.screenStream);
+          this.screenAudioSender = this.peerConnection.addTrack(screenAudioTrack, this.screenStream);
         }
       }
 
@@ -350,28 +361,20 @@ class WebRTCManager {
 
   /**
    * Stop screen sharing
+   * Removes the screen share tracks, camera remains untouched
    */
   async stopScreenShare() {
     if (!this.isScreenSharing || !this.screenStream) return;
 
-    // Remove screen audio tracks from peer connection
+    // Remove screen share tracks from peer connection
     if (this.peerConnection) {
-      const screenAudioTrack = this.screenStream.getAudioTracks()[0];
-      if (screenAudioTrack) {
-        const sender = this.peerConnection.getSenders()
-          .find(s => s.track === screenAudioTrack);
-        if (sender) {
-          this.peerConnection.removeTrack(sender);
-        }
+      if (this.screenVideoSender) {
+        this.peerConnection.removeTrack(this.screenVideoSender);
+        this.screenVideoSender = null;
       }
-
-      // Replace screen video back with camera video
-      const cameraVideoTrack = this.localStream?.getVideoTracks()[0];
-      const videoSender = this.peerConnection.getSenders()
-        .find(s => s.track && s.track.kind === 'video');
-
-      if (videoSender && cameraVideoTrack) {
-        await videoSender.replaceTrack(cameraVideoTrack);
+      if (this.screenAudioSender) {
+        this.peerConnection.removeTrack(this.screenAudioSender);
+        this.screenAudioSender = null;
       }
     }
 
@@ -425,7 +428,10 @@ class WebRTCManager {
 
     this.remoteStream = null;
     this.remoteUserId = null;
+    this.remoteStreamId = null;
     this.isScreenSharing = false;
+    this.screenVideoSender = null;
+    this.screenAudioSender = null;
     this.isMicOn = true;
     this.isCamOn = true;
     this.makingOffer = false;

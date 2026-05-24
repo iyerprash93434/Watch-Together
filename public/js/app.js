@@ -427,9 +427,11 @@
       remoteVideo.srcObject = null;
       remoteCamOff.classList.remove('hidden');
 
-      // Hide screen share if active
+      // Hide screen share if active and restore layout
       screenShareWrapper.classList.add('hidden');
-      videoGrid.classList.remove('screen-sharing');
+      videoGrid.classList.remove('screen-active');
+      localVideoWrapper.classList.remove('pip');
+      remoteVideoWrapper.classList.remove('pip');
 
       updateConnectionStatus('disconnected');
     });
@@ -464,7 +466,10 @@
     signaling.on('peer-screen-share-stopped', () => {
       showToast('Partner stopped screen sharing', 'info');
       screenShareWrapper.classList.add('hidden');
-      videoGrid.classList.remove('screen-sharing');
+      screenShareVideo.srcObject = null;
+      videoGrid.classList.remove('screen-active');
+      localVideoWrapper.classList.remove('pip');
+      remoteVideoWrapper.classList.remove('pip');
     });
   }
 
@@ -479,33 +484,55 @@
       remoteCamOff.classList.add('hidden');
     });
 
-    webrtc.on('remote-screen-track', (track) => {
-      const stream = new MediaStream([track]);
+    // Remote screen share stream received (contains video + audio)
+    webrtc.on('remote-screen-stream', (stream) => {
       screenShareVideo.srcObject = stream;
       screenShareWrapper.classList.remove('hidden');
-      videoGrid.classList.add('screen-sharing');
 
-      track.onended = () => {
-        screenShareWrapper.classList.add('hidden');
-        videoGrid.classList.remove('screen-sharing');
-      };
+      // Teams-like layout: screen share center, both cameras as PiP
+      videoGrid.classList.add('screen-active');
+      localVideoWrapper.classList.add('pip');
+      remoteVideoWrapper.classList.add('pip');
+    });
+
+    // Remote screen share ended (track ended)
+    webrtc.on('remote-screen-ended', () => {
+      screenShareWrapper.classList.add('hidden');
+      screenShareVideo.srcObject = null;
+      videoGrid.classList.remove('screen-active');
+      localVideoWrapper.classList.remove('pip');
+      remoteVideoWrapper.classList.remove('pip');
     });
 
     webrtc.on('connection-state', (state) => {
       updateConnectionStatus(state);
     });
 
+    // Local screen share started — camera stays visible as PiP
     webrtc.on('screen-share-started', (stream) => {
       btnToggleScreen.classList.add('active');
-      localVideo.srcObject = stream;
-      videoGrid.classList.add('screen-sharing-local');
+      screenShareVideo.srcObject = stream;
+      screenShareWrapper.classList.remove('hidden');
+
+      // Teams-like layout: screen share center, both cameras as PiP
+      videoGrid.classList.add('screen-active');
+      localVideoWrapper.classList.add('pip');
+      remoteVideoWrapper.classList.add('pip');
+
       showToast('Screen sharing started. Your partner can see your screen!', 'success');
     });
 
+    // Local screen share stopped — restore normal layout
     webrtc.on('screen-share-stopped', () => {
       btnToggleScreen.classList.remove('active');
-      localVideo.srcObject = webrtc.localStream;
-      videoGrid.classList.remove('screen-sharing-local');
+      screenShareVideo.srcObject = null;
+      screenShareWrapper.classList.add('hidden');
+
+      // Restore normal side-by-side layout
+      videoGrid.classList.remove('screen-active');
+      localVideoWrapper.classList.remove('pip');
+      remoteVideoWrapper.classList.remove('pip');
+
       showToast('Screen sharing stopped', 'info');
     });
 
@@ -609,7 +636,9 @@
     screenShareVideo.srcObject = null;
     previewVideo.srcObject = null;
     screenShareWrapper.classList.add('hidden');
-    videoGrid.classList.remove('screen-sharing', 'screen-sharing-local', 'chat-open');
+    videoGrid.classList.remove('screen-active', 'chat-open');
+    localVideoWrapper.classList.remove('pip');
+    remoteVideoWrapper.classList.remove('pip');
     chatPanel.classList.remove('open');
     isChatOpen = false;
     unreadMessages = 0;

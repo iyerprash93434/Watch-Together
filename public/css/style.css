@@ -1873,33 +1873,71 @@ img, video { display: block; max-width: 100%; }
   transform: translateY(0);
 }
 
-/* Screen sharing layout adjustments */
-.video-grid.screen-sharing {
+/* ================================================================
+   TEAMS-LIKE SCREEN SHARING LAYOUT
+   Screen share center, both cameras as PiP at bottom
+   ================================================================ */
+.video-grid.screen-active {
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
+  position: relative;
 }
 
-.video-grid.screen-sharing #local-video-wrapper,
-.video-grid.screen-sharing #remote-video-wrapper {
-  position: absolute;
-  bottom: calc(var(--controls-h) + 28px);
-  right: 24px;
-  width: 200px;
-  height: 140px;
-  z-index: calc(var(--z-controls) - 1);
-  border: 2px solid var(--surface-border);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+/* Screen share takes the full grid area */
+.video-grid.screen-active .screen-share {
+  grid-column: 1;
+  grid-row: 1;
 }
 
-.video-grid.screen-sharing #local-video-wrapper {
-  right: 240px;
-}
-
-.video-grid.screen-sharing-local #local-video-wrapper video {
+.video-grid.screen-active .screen-share video {
   object-fit: contain;
   background: #000;
 }
 
+/* Both camera feeds become PiP overlays */
+.video-grid.screen-active .video-wrapper.pip {
+  position: absolute;
+  width: 200px;
+  height: 140px;
+  z-index: calc(var(--z-controls) - 1);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  transition: all 0.35s var(--ease);
+  overflow: hidden;
+}
+
+/* You — bottom left */
+.video-grid.screen-active #local-video-wrapper.pip {
+  bottom: calc(var(--controls-h) + 28px);
+  left: 20px;
+  right: auto;
+}
+
+/* Partner — bottom right */
+.video-grid.screen-active #remote-video-wrapper.pip {
+  bottom: calc(var(--controls-h) + 28px);
+  right: 20px;
+  left: auto;
+}
+
+/* Hover glow on PiP */
+.video-grid.screen-active .video-wrapper.pip:hover {
+  border-color: var(--primary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6),
+              0 0 20px var(--primary-glow);
+  transform: scale(1.05);
+}
+
+/* PiP video label adjustment */
+.video-grid.screen-active .video-wrapper.pip .video-label {
+  bottom: 6px;
+  left: 6px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+}
+
+/* ─── Responsive: Screen Active ──────────────────────── */
 @media (max-width: 640px) {
   .landing-container {
     padding: 0 8px;
@@ -1926,17 +1964,31 @@ img, video { display: block; max-width: 100%; }
     font-size: 0.6rem;
   }
 
-  .video-grid.screen-sharing #local-video-wrapper,
-  .video-grid.screen-sharing #remote-video-wrapper {
+  /* Smaller PiP on mobile */
+  .video-grid.screen-active .video-wrapper.pip {
     width: 120px;
     height: 90px;
   }
 
-  .video-grid.screen-sharing #local-video-wrapper {
-    right: 150px;
+  .video-grid.screen-active #local-video-wrapper.pip {
+    bottom: calc(var(--controls-h) + 16px);
+    left: 10px;
+  }
+
+  .video-grid.screen-active #remote-video-wrapper.pip {
+    bottom: calc(var(--controls-h) + 16px);
+    right: 10px;
   }
 
   #call-view .video-grid.chat-open {
     width: 100%;
   }
 }
+
+@media (min-width: 1440px) {
+  .video-grid.screen-active .video-wrapper.pip {
+    width: 260px;
+    height: 180px;
+  }
+}
+
