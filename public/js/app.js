@@ -16,6 +16,7 @@
   let isTyping = false;
   let unreadMessages = 0;
   let isChatOpen = false;
+  let pipWindow = null; // Floating Picture-in-Picture window for camera feeds
 
   // ─── DOM Elements ──────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -470,6 +471,7 @@
       videoGrid.classList.remove('screen-active');
       localVideoWrapper.classList.remove('pip');
       remoteVideoWrapper.classList.remove('pip');
+      closeCameraPiP();
     });
   }
 
@@ -493,6 +495,9 @@
       videoGrid.classList.add('screen-active');
       localVideoWrapper.classList.add('pip');
       remoteVideoWrapper.classList.add('pip');
+
+      // Open floating PiP window so faces visible on other tabs
+      openCameraPiP();
     });
 
     // Remote screen share ended (track ended)
@@ -502,6 +507,7 @@
       videoGrid.classList.remove('screen-active');
       localVideoWrapper.classList.remove('pip');
       remoteVideoWrapper.classList.remove('pip');
+      closeCameraPiP();
     });
 
     webrtc.on('connection-state', (state) => {
@@ -519,6 +525,9 @@
       localVideoWrapper.classList.add('pip');
       remoteVideoWrapper.classList.add('pip');
 
+      // Open floating PiP window so faces are visible even on other tabs
+      openCameraPiP();
+
       showToast('Screen sharing started. Your partner can see your screen!', 'success');
     });
 
@@ -532,6 +541,9 @@
       videoGrid.classList.remove('screen-active');
       localVideoWrapper.classList.remove('pip');
       remoteVideoWrapper.classList.remove('pip');
+
+      // Close floating PiP window
+      closeCameraPiP();
 
       showToast('Screen sharing stopped', 'info');
     });
@@ -551,6 +563,154 @@
         remoteCamOff.classList.add('hidden');
       }
     });
+  }
+
+  // ─── Floating PiP Window (Camera feeds on top) ─────
+  /**
+   * Opens a floating Picture-in-Picture window showing both camera feeds.
+   * Uses Document PiP API (Chrome 116+) with fallback to standard video PiP.
+   * This keeps faces visible even when switching to another tab.
+   */
+  async function openCameraPiP() {
+    // Close any existing PiP window first
+    closeCameraPiP();
+
+    // Try Document Picture-in-Picture API (Chrome 116+, Edge 116+)
+    if ('documentPictureInPicture' in window) {
+      try {
+        pipWindow = await documentPictureInPicture.requestWindow({
+          width: 420,
+          height: 180
+        });
+
+        // Style the floating window
+        const style = pipWindow.document.createElement('style');
+        style.textContent = `
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            background: #0a0a1a;
+            display: flex;
+            gap: 4px;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Inter', system-ui, sans-serif;
+          }
+          .pip-cam {
+            flex: 1;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #1a0a2e;
+          }
+          .pip-cam video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+          }
+          .pip-label {
+            position: absolute;
+            bottom: 6px;
+            left: 6px;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 500;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            padding: 2px 10px;
+            border-radius: 20px;
+          }
+          .pip-no-video {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #140f23, #0a1628);
+          }
+          .pip-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c3aed, #06b6d4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        `;
+        pipWindow.document.head.appendChild(style);
+
+        // Create local camera container
+        const localContainer = pipWindow.document.createElement('div');
+        localContainer.className = 'pip-cam';
+        const localVid = pipWindow.document.createElement('video');
+        localVid.srcObject = localVideo.srcObject;
+        localVid.autoplay = true;
+        localVid.muted = true;
+        localVid.playsInline = true;
+        const localLabel = pipWindow.document.createElement('div');
+        localLabel.className = 'pip-label';
+        localLabel.textContent = 'You';
+        localContainer.appendChild(localVid);
+        localContainer.appendChild(localLabel);
+
+        // Create remote camera container
+        const remoteContainer = pipWindow.document.createElement('div');
+        remoteContainer.className = 'pip-cam';
+        const remoteVid = pipWindow.document.createElement('video');
+        remoteVid.srcObject = remoteVideo.srcObject;
+        remoteVid.autoplay = true;
+        remoteVid.playsInline = true;
+        const remoteLabel = pipWindow.document.createElement('div');
+        remoteLabel.className = 'pip-label';
+        remoteLabel.textContent = 'Partner';
+        remoteContainer.appendChild(remoteVid);
+        remoteContainer.appendChild(remoteLabel);
+
+        pipWindow.document.body.appendChild(localContainer);
+        pipWindow.document.body.appendChild(remoteContainer);
+
+        // Handle PiP window being closed by user
+        pipWindow.addEventListener('pagehide', () => {
+          pipWindow = null;
+        });
+
+        console.log('[PiP] Document PiP window opened');
+        return;
+      } catch (err) {
+        console.warn('[PiP] Document PiP failed:', err.message);
+      }
+    }
+
+    // Fallback: Standard Video PiP (shows partner's face only)
+    try {
+      if (remoteVideo.srcObject && remoteVideo.readyState >= 2) {
+        await remoteVideo.requestPictureInPicture();
+        console.log('[PiP] Standard PiP opened for partner video');
+      }
+    } catch (err) {
+      console.warn('[PiP] Standard PiP failed:', err.message);
+      showToast('Tip: Keep this tab visible to see camera feeds, or use Chrome for floating window', 'info', 5000);
+    }
+  }
+
+  /**
+   * Close the floating PiP window
+   */
+  function closeCameraPiP() {
+    if (pipWindow) {
+      try {
+        pipWindow.close();
+      } catch (e) { /* already closed */ }
+      pipWindow = null;
+    }
+
+    // Also exit standard PiP if active
+    if (document.pictureInPictureElement) {
+      try {
+        document.exitPictureInPicture();
+      } catch (e) { /* ignore */ }
+    }
   }
 
   // ─── Helpers ───────────────────────────────────────
@@ -627,6 +787,7 @@
 
   function leaveCall() {
     stopCallTimer();
+    closeCameraPiP();
     webrtc.cleanup();
     signaling.leaveRoom();
 
